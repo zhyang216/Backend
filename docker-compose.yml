@@ -9,11 +9,11 @@ services:
       - "8080:8080"
     depends_on:
       - db
-    network_mode: host
     environment:
       DATABASE_URL: postgres://rudrist_admin:123456@db:5432/rudristdb
       ROCKET_PORT: 8080
-      
+    networks:
+      - rudrist-network
   db:
     image: postgres:latest
     ports:
@@ -23,9 +23,13 @@ services:
       POSTGRES_PASSWORD: 123456
       POSTGRES_DB: rudristdb
       PGDATA: /var/lib/postgresql/data
-    network_mode: host
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    networks:
+      - rudrist-network
 
+networks:
+  rudrist-network:
+    driver: bridge
 volumes:
   postgres_data:
