@@ -7,28 +7,49 @@ It is not hosted yet.
 ## Functionality
 
 * Done
-    * signup
-    * login
-    * reset password
-    * logout
+  * signup
+  * login
+  * reset password
+  * logout
 
 * Todo
-    * forget password
+  * forget password
 
 All errors lead to `Status::BadRequest` and a simple string for now.
+
+## Install dependency
+
+``` shell
+rustup default nightly && rustup update
+sudo apt-get install libpq-dev
+cargo install diesel_cli --no-default-features --features postgres
+```
 
 ## How to Use
 
 1. Modify the content of `.env` and `Rocket.toml` file.
-2. `diesel migration run`
-3. `cargo run`
+2. `echo DATABASE_URL=postgres://username:password@localhost/diesel_demo > .env`
+3. `diesel migration run`
+4. `cargo run`
 
-The following lists the available sites for now: 
-- "/index"
-- "/signup"
-- "/login"
-- "/user_center"
-- "/logout"
+## Run with docker
+
+``` shell
+docker-compose up -d
+docker-compose down
+```
+
+``` shell
+docker run -it --rm  postgres psql -h Your IP -U rudrist_admin -d rudristdb
+```
+
+The following lists the available sites for now:
+
+* "/index"
+* "/signup"
+* "/login"
+* "/user_center"
+* "/logout"
 
 ## Notes
 
