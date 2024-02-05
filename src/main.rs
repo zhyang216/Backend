@@ -1,25 +1,19 @@
 #[macro_use] extern crate rocket;
 
-use std::sync::{Arc, Mutex};
 use std::path::{Path, PathBuf};
-use rand_chacha::ChaCha8Rng;
 use rand_core::{SeedableRng, RngCore};
 use rocket::http::{CookieJar, Status};
 use rocket_db_pools::{Connection, Database};
 use rocket::fs::NamedFile;
 use rocket::response::content::RawHtml;
+use std::sync::{Arc, Mutex};
 
-type Random = Arc<Mutex<rand_chacha::ChaCha8Rng>>;
 
-mod database;
-mod schema;
-mod session;
-mod signup;
-mod login;
-mod user_center;
+mod db_lib;
+use db_lib::{database, RAND};
+mod auth;
+use auth::{login, signup, user_center};
 
-const USER_COOKIE_NAME: &str = "user_token";
-// const COOKIE_MAX_AGE: &str = "9999999";
 
 #[get("/")]
 fn index() -> RawHtml<&'static str> {
@@ -66,10 +60,7 @@ async fn files(file: PathBuf) -> Option<NamedFile> {
     NamedFile::open(Path::new("./static/").join(file)).await.ok()
 }
 
-// this structure is used to help session (the name is not fancy at all)
-struct RAND {
-    random: Arc<Mutex<ChaCha8Rng>>
-}
+
 
 #[rocket::main]
 async fn main() {

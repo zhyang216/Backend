@@ -8,9 +8,9 @@ use diesel::query_dsl::methods::{FilterDsl, SelectDsl};
 use pbkdf2::password_hash::{PasswordHash, PasswordHasher};
 use pbkdf2::{password_hash::PasswordVerifier, Pbkdf2,};
 
-use crate::{database, USER_COOKIE_NAME};
-use crate::schema::{sessions, users};
-use crate::session::SessionToken;
+use crate::db_lib::{database, USER_COOKIE_NAME};
+use crate::db_lib::schema::{sessions, users};
+use crate::db_lib::session::SessionToken;
 
 // return the user_id according to the session token from the client(cookie)
 pub(crate) async fn get_logged_in_user_id(

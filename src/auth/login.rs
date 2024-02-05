@@ -17,11 +17,11 @@ use lettre::{Message, SmtpTransport, Transport};
 use chrono::{Duration, Utc};
 use urlencoding::encode;
 
-use crate::schema::users;
-use crate::session::new_session;
-use crate::user_center::get_logged_in_user_id;
-use crate::USER_COOKIE_NAME;
-use crate::{database, RAND};
+use crate::db_lib::schema::users;
+use crate::db_lib::session::new_session;
+use crate::auth::user_center::get_logged_in_user_id;
+use crate::db_lib::USER_COOKIE_NAME;
+use crate::db_lib::{database, RAND};
 
 #[derive(FromForm)]
 pub(crate) struct LoginInfo<'r> {

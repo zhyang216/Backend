@@ -3,10 +3,12 @@ use rand_core::RngCore;
 use rocket::http::Status;
 use rocket_db_pools::Connection;
 use rocket_db_pools::diesel::RunQueryDsl;
+use std::sync::{Arc, Mutex};
 
-use crate::database;
-use crate::schema;
-use crate::Random;
+use crate::db_lib::database;
+use crate::db_lib::schema;
+
+type Random = Arc<Mutex<rand_chacha::ChaCha8Rng>>;
 
 #[derive(Clone, Copy)]
 pub(crate) struct SessionToken(u128);

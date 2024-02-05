@@ -6,8 +6,8 @@ use rocket_db_pools::Connection;
 use pbkdf2::password_hash::PasswordHasher;
 use ::diesel::ExpressionMethods;
 
-use crate::database;
-use crate::schema;
+use crate::db_lib::database;
+use crate::db_lib::schema;
 
 // The signup info of the user. Simple constraints are checked in the front end (html).
 #[derive(FromForm)]
