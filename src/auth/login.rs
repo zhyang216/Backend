@@ -23,6 +23,7 @@ use crate::auth::user_center::get_logged_in_user_id;
 use crate::db_lib::USER_COOKIE_NAME;
 use crate::db_lib::{database, RAND};
 
+
 #[derive(FromForm)]
 pub(crate) struct LoginInfo<'r> {
     user_name: &'r str,
