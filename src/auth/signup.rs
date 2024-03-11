@@ -21,11 +21,11 @@ pub(crate) struct SignupInfo<'r> {
 // TODO, signup is available only when not logged in
 // if signup sucessfully, redirect to login page. (It won't log in automatically)
 // Otherwise, return Status::BadRequest and a string indicating the error. (It is not fancy at all :< )
-#[post("/signup", data = "<signup_info>")]
+#[post("/api/auth/register", data = "<signup_info>")]
 pub(crate) async fn signup(
     signup_info: Form<Strict<SignupInfo<'_>>>, 
     mut accounts_db_coon: Connection<database::AccountsDb>
-) -> Result<Redirect, (Status, &'static str)> {
+) -> Result<Status, (Status, &'static str)> {
 
     // confirm the password
     if signup_info.user_password != signup_info.confirm_password {
@@ -42,21 +42,21 @@ pub(crate) async fn signup(
     };
 
     // inser the signup user data into the database
-    let signup_user_id = rocket_db_pools::diesel::insert_into(schema::users::table)
+    let signup_user_id = rocket_db_pools::diesel::insert_into(schema::accounts::table)
         .values((
-            schema::users::username.eq(signup_info.user_name.to_string()),
-            schema::users::email.eq(signup_info.user_email.to_string()),
-            schema::users::password.eq(&hashed_password),
+            schema::accounts::username.eq(signup_info.user_name.to_string()),
+            schema::accounts::email.eq(signup_info.user_email.to_string()),
+            schema::accounts::password.eq(&hashed_password),
         ))
         .execute(&mut accounts_db_coon).await;
     
     // if the user data is inserted successfully, redirect to login page
     match signup_user_id {
         Ok(_) => {
-            Ok(Redirect::to(uri!("/login")))
+            return Ok(Status::Ok);
         }
         Err(_) => {
-            Err((Status::BadRequest, "The input is invalid. Username/email has been used probably."))
+            return Err((Status::BadRequest, "Account already exist."));
         }
     }
 }
