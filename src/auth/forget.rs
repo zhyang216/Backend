@@ -18,7 +18,7 @@ use rocket_db_pools::Connection;
 use urlencoding::encode;
 
 use crate::auth::user_center::get_logged_in_user_id;
-use crate::db_lib::schema::users;
+use crate::db_lib::schema::accounts;
 use crate::db_lib::session::new_session;
 use crate::db_lib::USER_COOKIE_NAME;
 use crate::db_lib::{database, RAND};
@@ -31,17 +31,17 @@ pub(crate) struct ForgetPasswordInfo<'r> {
 #[post("/api/auth/forget", data = "<forget_password_info>")]
 pub(crate) async fn forget_password(
     forget_password_info: Form<Strict<ForgetPasswordInfo<'_>>>,
-    mut accounts_db_coon: Connection<database::AccountsDb>,
+    mut accounts_db_conn: Connection<database::AccountsDb>,
     cookies: &CookieJar<'_>,
 ) -> Result<(Status, &'static str), (Status, &'static str)> {
-    if let Some(_) = get_logged_in_user_id(cookies, &mut accounts_db_coon).await {
+    if let Some(_) = get_logged_in_user_id(cookies, &mut accounts_db_conn).await {
         return Err((Status::BadRequest, "Already Logged in."));
     }
 
     println!("{}", forget_password_info.user_name);
-    let fetch_user_email = users::table
-        .select(users::email)
-        .filter(users::username.eq(forget_password_info.user_name.to_string()))
+    let fetch_user_email = accounts::table
+        .select(accounts::email)
+        .filter(accounts::username.eq(forget_password_info.user_name.to_string()))
         .first::<String>(&mut accounts_db_coon)
         .await;
 
@@ -111,7 +111,7 @@ pub(crate) struct ResetPasswordInfo<'r> {
 #[post("/api/auth/forget/<username>/<resettoken>/<expiration_timestamp>", data = "<reset_info>")]
 pub(crate) async fn reset_password(
     reset_info: Form<Strict<SignupInfo<'_>>>,
-    mut accounts_db_coon: Connection<database::AccountsDb>
+    mut accounts_db_conn: Connection<database::AccountsDb>
 ) -> Result<Status, (Status, &'static str)> {
 
     // confirm the password
