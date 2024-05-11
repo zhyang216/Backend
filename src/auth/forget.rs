@@ -42,7 +42,7 @@ pub(crate) async fn forget_password(
     let fetch_user_email = accounts::table
         .select(accounts::email)
         .filter(accounts::username.eq(forget_password_info.user_name.to_string()))
-        .first::<String>(&mut accounts_db_coon)
+        .first::<String>(&mut accounts_db_conn)
         .await;
 
     let user_email = if let Ok(user_email) = fetch_user_email {
