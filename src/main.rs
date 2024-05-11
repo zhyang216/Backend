@@ -14,6 +14,7 @@ mod db_lib;
 use db_lib::{database, RAND};
 mod auth;
 use auth::{forget, login, signup, user_center};
+mod ledger;
 
 #[get("/")]
 fn index() -> RawHtml<&'static str> {
