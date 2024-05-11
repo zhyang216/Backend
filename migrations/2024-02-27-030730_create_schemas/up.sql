@@ -109,12 +109,13 @@ CREATE TABLE IF NOT EXISTS accounts (
 -- 投資組合
 CREATE TABLE IF NOT EXISTS portfolios ( -- 多種幣對（部位）的組合
     id SERIAL PRIMARY KEY ,
-    time_stamp TIMESTAMP NOT NULL,
+    name VARCHAR(50) NOT NULL UNIQUE,
+    time_stamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     -- trading_pair_id INTEGER NOT NULL, -- 幣對 ID 透過 balance 可判斷
     -- admin_account_id SERIAL REFERENCES accounts(id) NOT NULL,
     trader_account_id SERIAL REFERENCES accounts(id) NOT NULL,
     portfolio_type INTEGER NOT NULL -- 0: 一般策略, 1: 雜費, 2: 剩餘資金
-    -- available_balance DECIMAL(28, 8) NOT NULL, -- 可動用資金
+    -- available_balance DECIMAL(28, 8) NOT NULL, -- 可動用資金 
 );
 
 -- 投組餘額
@@ -122,7 +123,7 @@ CREATE TABLE IF NOT EXISTS portfolio_balance (
     id SERIAL PRIMARY KEY ,
     portfolio_id SERIAL REFERENCES portfolios(id) NOT NULL,
     quantity BIGINT NOT NULL DEFAULT 0,
-    currency_id INTEGER REFERENCES currencies(id) NOT NULL
+    currency_id INTEGER NOT NULL DEFAULT 0
 );
 
 -- 部位

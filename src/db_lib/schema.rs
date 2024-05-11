@@ -75,6 +75,8 @@ diesel::table! {
 diesel::table! {
     portfolios (id) {
         id -> Int4,
+        #[max_length = 50]
+        name -> Varchar,
         time_stamp -> Timestamp,
         trader_account_id -> Int4,
         portfolio_type -> Int4,
