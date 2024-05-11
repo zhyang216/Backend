@@ -18,7 +18,7 @@ use crate::db_lib::schema::{sessions, accounts, portfolios, portfolio_balance};
 pub(crate) async fn get_portfolio_names(
     mut accounts_db_coon: Connection<database::AccountsDb>, 
     cookies: &CookieJar<'_>
-) -> Result<Json<Vec<(String, i64, i32)>>, Status> {
+) -> Result<Json<(Vec<(String, i64, i32)>, usize)>, Status> {
     // ensure the user is logged in
     if user_center::get_logged_in_user_id(cookies, &mut accounts_db_coon).await.is_none() {
         return Err(Status::BadRequest);
@@ -55,7 +55,8 @@ pub(crate) async fn get_portfolio_names(
                     Err(_) => return Err(Status::InternalServerError), 
                 } 
             }
-            Ok(Json(portfolio_balances))
+            let num_portfolios = portfolio_balances.len();
+            Ok(Json((portfolio_balances, num_portfolios)))
         },
         Err(_) => Err(Status::InternalServerError), 
     }
