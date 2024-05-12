@@ -14,6 +14,8 @@ mod db_lib;
 use db_lib::{database, RAND};
 mod auth;
 use auth::{login, signup, user_center, forget};
+mod portfolio;
+use portfolio::{change_portfolio::change_portfolio, create_portfolio::add_portfolio, remove_portfolio::remove_portfolio, get_portfolio::get_portfolio_names};
 
 
 #[get("/")]
@@ -66,6 +68,17 @@ async fn forget_page(
     return Ok(RawHtml(include_str!("../static/forget.html")));
 }
 
+#[get("/api/portfolio")]
+async fn portfolio_page(
+    mut accounts_db_coon: Connection<database::AccountsDb>, 
+    cookies: &CookieJar<'_>
+) -> Result<RawHtml<&'static str>, (Status, &'static str)> {
+    
+    if let None = user_center::get_logged_in_user_id(cookies, &mut accounts_db_coon).await {
+        return Err((Status::BadRequest, "Not yet logged in."));
+    }
+    return Ok(RawHtml(include_str!("../static/portfolio.html")));
+}
 
 //TO DO get(reset_page)
 /*
@@ -115,6 +128,8 @@ async fn main() {
         .mount("/", routes![login_page, login::login])
         .mount("/", routes![user_center_page, user_center::reset_password, user_center::logout])
         .mount("/", routes![forget_page, forget::forget_password])
+        .mount("/", routes![portfolio_page, portfolio::create_portfolio::add_portfolio, portfolio::remove_portfolio::remove_portfolio, 
+        portfolio::get_portfolio::get_portfolio_names, portfolio::change_portfolio::change_portfolio])
         .launch()
         .await
         .expect("Failed to launch rocket");
