@@ -1,11 +1,9 @@
 use ::diesel::ExpressionMethods;
 use pbkdf2::password_hash::PasswordHasher;
-use rocket::form::{Form, Strict};
 use rocket::http::Status;
-use rocket::response::Redirect;
 use rocket_db_pools::diesel::prelude::RunQueryDsl;
 use rocket_db_pools::Connection;
-use rocket::serde::json::{self, Json};
+use rocket::serde::json::Json;
 use crate::db_lib::database;
 use crate::db_lib::schema;
 use serde::{Serialize, Deserialize};
