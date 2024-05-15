@@ -38,7 +38,7 @@ impl SessionToken {
 pub(crate) async fn new_session(
     random: Random,
     user_id: i32,
-    mut accounts_db_conn: &mut Connection<database::AccountsDb>,
+    mut db_conn: &mut Connection<database::PgDb>,
 ) -> Result<SessionToken, (Status, &'static str)> {
     let session_token = SessionToken::generate_new(random);
     let insert_session = rocket_db_pools::diesel::insert_into(schema::sessions::table)
@@ -46,7 +46,7 @@ pub(crate) async fn new_session(
             schema::sessions::user_id.eq(user_id),
             schema::sessions::session_token.eq(session_token.into_database_value()),
         ))
-        .execute(&mut accounts_db_conn)
+        .execute(&mut db_conn)
         .await;
 
     if let Ok(_) = insert_session {

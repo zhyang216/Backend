@@ -35,7 +35,7 @@ pub(crate) struct LoginInfo<'r> {
 #[post("/api/auth/login", data = "<login_info>")]
 pub(crate) async fn login(
     login_info: Form<Strict<LoginInfo<'_>>>,
-    mut accounts_db_conn: Connection<database::AccountsDb>,
+    mut db_conn: Connection<database::PgDb>,
     cookies: &CookieJar<'_>,
     random: &State<RAND>,
 ) -> Result<(Status, String), (Status, &'static str)> {
@@ -43,7 +43,7 @@ pub(crate) async fn login(
     let login_result = accounts::table
         .select((accounts::id, accounts::password))
         .filter(accounts::username.eq(login_info.user_name.to_string()))
-        .first::<(i32, String)>(&mut accounts_db_conn)
+        .first::<(i32, String)>(&mut db_conn)
         .await;
 
     // If query fails, return badquest
@@ -65,7 +65,7 @@ pub(crate) async fn login(
     }
 
     // Generate a session key. Save it in both the server(database) and the client(cookie).
-    let token = new_session(random.random.clone(), user_id, &mut accounts_db_conn).await;
+    let token = new_session(random.random.clone(), user_id, &mut db_conn).await;
     match token {
         Ok(token) => {
             let cookie_value = token.into_cookie_value();

@@ -10,12 +10,11 @@ use rocket_db_pools::diesel::prelude::*;
 
 #[get("/api/risk")]
 pub(crate) async fn get_risk_status(
-    mut accounts_db_conn: Connection<database::AccountsDb>,
-    mut risk_management_db_conn: Connection<database::RiskManagementDb>,
+    mut db_conn: Connection<database::PgDb>,
     cookies: &CookieJar<'_>,
 ) -> Result<(Status, String), (Status, &'static str)> {
     // get user id
-    let user_id = if let Some(user_id) = get_logged_in_user_id(cookies, &mut accounts_db_conn).await
+    let user_id = if let Some(user_id) = get_logged_in_user_id(cookies, &mut db_conn).await
     {
         user_id
     } else {
@@ -36,7 +35,7 @@ pub(crate) async fn get_risk_status(
             risk_management::position,
             risk_management::portfolio_id,
         ))
-        .load::<(String, bool, i64, i32, i32)>(&mut risk_management_db_conn)
+        .load::<(String, bool, i64, i32, i32)>(&mut db_conn)
         .await;
 
     let risk_status = if let Ok(risk_status) = fetch_risk_status {
@@ -67,9 +66,7 @@ pub(crate) struct RiskData<'r> {
 #[post("/api/risk", data = "<risk_data>")]
 pub(crate) async fn update_risk(
     risk_data: Form<Strict<RiskData<'_>>>,
-    mut accounts_db_conn: Connection<database::AccountsDb>,
-    mut portfolios_db_conn: Connection<database::PortfoliosDb>,
-    mut risk_management_db_conn: Connection<database::RiskManagementDb>,
+    mut db_conn: Connection<database::PgDb>,
     cookies: &CookieJar<'_>,
 ) -> Result<(Status, &'static str), (Status, &'static str)> {
     // check the existence of the risk management data
@@ -82,7 +79,7 @@ pub(crate) async fn update_risk(
             risk_management::position,
             risk_management::portfolio_id,
         ))
-        .first::<(String, bool, i64, i32, i32)>(&mut risk_management_db_conn)
+        .first::<(String, bool, i64, i32, i32)>(&mut db_conn)
         .await;
 
     if let Err(_) = risk_management_exist {
@@ -95,7 +92,7 @@ pub(crate) async fn update_risk(
                 risk_management::pnl.eq(risk_data.pnl),
                 risk_management::position.eq(risk_data.position),
             ))
-            .execute(&mut risk_management_db_conn)
+            .execute(&mut db_conn)
             .await;
 
         if let Err(_) = insert_risk_info {
@@ -107,7 +104,7 @@ pub(crate) async fn update_risk(
         // if the risk management data exists
         // fisrt, check the ownership
         let user_id =
-            if let Some(user_id) = get_logged_in_user_id(cookies, &mut accounts_db_conn).await {
+            if let Some(user_id) = get_logged_in_user_id(cookies, &mut db_conn).await {
                 user_id
             } else {
                 return Err((
@@ -119,7 +116,7 @@ pub(crate) async fn update_risk(
         let fetch_user_id = portfolios::table
             .filter(portfolios::id.eq(risk_data.portfolio_id))
             .select(portfolios::trader_account_id)
-            .first::<i32>(&mut portfolios_db_conn)
+            .first::<i32>(&mut db_conn)
             .await;
 
         match fetch_user_id {
@@ -142,7 +139,7 @@ pub(crate) async fn update_risk(
             risk_management::pnl.eq(risk_data.pnl),
             risk_management::position.eq(risk_data.position),
         ))
-        .execute(&mut risk_management_db_conn)
+        .execute(&mut db_conn)
         .await;
 
         if let Err(_) = update_risk_info {

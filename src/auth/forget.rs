@@ -31,10 +31,10 @@ pub(crate) struct ForgetPasswordInfo<'r> {
 #[post("/api/auth/forget", data = "<forget_password_info>")]
 pub(crate) async fn forget_password(
     forget_password_info: Form<Strict<ForgetPasswordInfo<'_>>>,
-    mut accounts_db_conn: Connection<database::AccountsDb>,
+    mut db_conn: Connection<database::PgDb>,
     cookies: &CookieJar<'_>,
 ) -> Result<(Status, &'static str), (Status, &'static str)> {
-    if let Some(_) = get_logged_in_user_id(cookies, &mut accounts_db_conn).await {
+    if let Some(_) = get_logged_in_user_id(cookies, &mut db_conn).await {
         return Err((Status::BadRequest, "Already Logged in."));
     }
 
@@ -42,7 +42,7 @@ pub(crate) async fn forget_password(
     let fetch_user_email = accounts::table
         .select(accounts::email)
         .filter(accounts::username.eq(forget_password_info.user_name.to_string()))
-        .first::<String>(&mut accounts_db_conn)
+        .first::<String>(&mut db_conn)
         .await;
 
     let user_email = if let Ok(user_email) = fetch_user_email {
@@ -111,7 +111,7 @@ pub(crate) struct ResetPasswordInfo<'r> {
 #[post("/api/auth/forget/<username>/<resettoken>/<expiration_timestamp>", data = "<reset_info>")]
 pub(crate) async fn reset_password(
     reset_info: Form<Strict<SignupInfo<'_>>>,
-    mut accounts_db_conn: Connection<database::AccountsDb>
+    mut db_conn: Connection<database::AccountsDb>
 ) -> Result<Status, (Status, &'static str)> {
 
     // confirm the password

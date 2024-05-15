@@ -15,7 +15,7 @@ use crate::db_lib::{database, USER_COOKIE_NAME};
 // return the user_id according to the session token from the client(cookie)
 pub(crate) async fn get_logged_in_user_id(
     cookies: &CookieJar<'_>,
-    mut accounts_db_conn: &mut Connection<database::AccountsDb>,
+    mut db_conn: &mut Connection<database::PgDb>,
 ) -> Option<i32> {
     // get the session token from the client(cookie)
     let fetch_cookie = cookies
@@ -32,7 +32,7 @@ pub(crate) async fn get_logged_in_user_id(
     let fetch_user_id = sessions::table
         .select(sessions::user_id)
         .filter(sessions::session_token.eq(session_token.into_database_value()))
-        .first::<i32>(&mut accounts_db_conn)
+        .first::<i32>(&mut db_conn)
         .await;
 
     if let Ok(user_id) = fetch_user_id {
@@ -46,7 +46,7 @@ pub(crate) async fn get_logged_in_user_id(
 pub(crate) async fn set_new_password(
     user_id: i32,
     new_password: &str,
-    mut accounts_db_conn: &mut Connection<database::AccountsDb>,
+    mut db_conn: &mut Connection<database::PgDb>,
 ) -> Result<Redirect, (Status, &'static str)> {
     // hash the new password
     let salt = pbkdf2::password_hash::SaltString::generate(&mut rand_core::OsRng);
@@ -61,7 +61,7 @@ pub(crate) async fn set_new_password(
     let update_password =
         rocket_db_pools::diesel::update(accounts::table.filter(accounts::id.eq(user_id)))
             .set(accounts::password.eq(new_hashed_password))
-            .execute(&mut accounts_db_conn)
+            .execute(&mut db_conn)
             .await;
 
     match update_password {
@@ -81,11 +81,11 @@ pub(crate) struct ResetPasswordInfo<'r> {
 #[post("/reset_password", data = "<reset_password_info>")]
 pub(crate) async fn reset_password(
     reset_password_info: Form<Strict<ResetPasswordInfo<'_>>>,
-    mut accounts_db_conn: Connection<database::AccountsDb>,
+    mut db_conn: Connection<database::PgDb>,
     cookies: &CookieJar<'_>,
 ) -> Result<Redirect, (Status, &'static str)> {
     // ensure the user is logged in
-    let user_id = if let Some(user_id) = get_logged_in_user_id(cookies, &mut accounts_db_conn).await
+    let user_id = if let Some(user_id) = get_logged_in_user_id(cookies, &mut db_conn).await
     {
         user_id
     } else {
@@ -99,7 +99,7 @@ pub(crate) async fn reset_password(
     let fetch_user_password = accounts::table
         .select(accounts::password)
         .filter(accounts::id.eq(user_id))
-        .first::<String>(&mut accounts_db_conn)
+        .first::<String>(&mut db_conn)
         .await;
 
     let current_hashed_password = if let Ok(password) = fetch_user_password {
@@ -119,7 +119,7 @@ pub(crate) async fn reset_password(
     set_new_password(
         user_id,
         reset_password_info.new_password,
-        &mut accounts_db_conn,
+        &mut db_conn,
     )
     .await
 }
@@ -127,12 +127,12 @@ pub(crate) async fn reset_password(
 // remove the session token from both the server(database) and the client(cookie)
 #[get("/logout")]
 pub(crate) async fn logout(
-    mut accounts_db_conn: Connection<database::AccountsDb>,
+    mut db_conn: Connection<database::PgDb>,
     cookies: &CookieJar<'_>,
 ) -> Result<Redirect, (Status, &'static str)> {
     // Ensure the user is logged in
     let user_id =
-        if let Some(user_id) = get_logged_in_user_id(&cookies, &mut accounts_db_conn).await {
+        if let Some(user_id) = get_logged_in_user_id(&cookies, &mut db_conn).await {
             user_id
         } else {
             return Err((Status::BadRequest, "Not logged in."));
@@ -141,7 +141,7 @@ pub(crate) async fn logout(
     // remove session token from server(database) and client(cookie)
     cookies.remove_private(USER_COOKIE_NAME);
     return match diesel::delete(sessions::table.filter(sessions::user_id.eq(user_id)))
-        .execute(&mut accounts_db_conn)
+        .execute(&mut db_conn)
         .await
     {
         Ok(_) => Ok(Redirect::to(uri!("/login"))),

@@ -24,7 +24,7 @@ pub(crate) struct SignupInfo<'r> {
 #[post("/api/auth/register", data = "<signup_info>")]
 pub(crate) async fn signup(
     signup_info: Form<Strict<SignupInfo<'_>>>,
-    mut accounts_db_conn: Connection<database::AccountsDb>,
+    mut db_conn: Connection<database::PgDb>,
 ) -> Result<Status, (Status, &'static str)> {
     // confirm the password
     if signup_info.user_password != signup_info.confirm_password {
@@ -47,7 +47,7 @@ pub(crate) async fn signup(
             schema::accounts::email.eq(signup_info.user_email.to_string()),
             schema::accounts::password.eq(&hashed_password),
         ))
-        .execute(&mut accounts_db_conn)
+        .execute(&mut db_conn)
         .await;
 
     // if the user data is inserted successfully, redirect to login page
