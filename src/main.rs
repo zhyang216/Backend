@@ -121,6 +121,7 @@ async fn main() {
             ],
         )
         .mount("/", routes![forget_page, forget::forget_password])
+        .mount("/", routes![risk::get_risk_status, risk::update_risk])
         .launch()
         .await
         .expect("Failed to launch rocket");

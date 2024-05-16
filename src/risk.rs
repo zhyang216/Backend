@@ -7,22 +7,26 @@ use crate::auth::user_center::get_logged_in_user_id;
 use crate::db_lib::database;
 use crate::db_lib::schema::{portfolios, risk_management};
 use rocket_db_pools::diesel::prelude::*;
-
+use serde::{Serialize, Deserialize};
+use rocket::serde::json::{json, Value};
+use crate::auth::validation::UserAuth;
 #[get("/api/risk")]
 pub(crate) async fn get_risk_status(
     mut db_conn: Connection<database::PgDb>,
-    cookies: &CookieJar<'_>,
-) -> Result<(Status, String), (Status, &'static str)> {
+    // cookies: &CookieJar<'_>,
+    _user_auth: UserAuth,
+) -> (Status, Value) {
     // get user id
-    let user_id = if let Some(user_id) = get_logged_in_user_id(cookies, &mut db_conn).await
-    {
-        user_id
-    } else {
-        return Err((
-            Status::BadRequest,
-            "Cannot fetch user id based on session token cookie or cookie crushed.",
-        ));
-    };
+    // let user_id = if let Some(user_id) = get_logged_in_user_id(cookies, &mut db_conn).await
+    // {
+    //     user_id
+    // } else {
+    //     return (
+    //         Status::BadRequest,
+    //         json!({"status":"error", "message":"Cannot fetch user id based on session token cookie or cookie crushed."})
+    //     );
+    // };
+    let user_id = _user_auth.user_id;
 
     // fetch risk status
     let fetch_risk_status = risk_management::table
@@ -41,17 +45,20 @@ pub(crate) async fn get_risk_status(
     let risk_status = if let Ok(risk_status) = fetch_risk_status {
         risk_status
     } else {
-        return Err((Status::BadRequest, "Risk staqtus not found"));
+        return (Status::BadRequest,
+             json!({"status":"error", "message":"Risk staqtus not found"}));
     };
 
     // return risk status
-    let mut risk_status_str = String::from("{\n  \"success\": true,\n  \"data\": [\n");
+    let mut risk_data:Vec<Value> = vec!();
+    let len = risk_status.len();
     for (risk_type, valid, pnl, position, portfolio_id) in risk_status {
-        risk_status_str.push_str(&format!("    {{\n      \"type\": \"{}\",\n      \"on\": {},\n      \"pnl\": {},\n      \"position\": \"{}\",\n      \"pid\": \"{}\"\n    }},\n", risk_type, valid, pnl, position, portfolio_id));
+        risk_data.push(json!({"type": risk_type, "on": valid, "pnl": pnl, "position": position, "portfolio_id": portfolio_id}));
     }
-    risk_status_str.pop();
-    risk_status_str.push_str("  ]\n}");
-    return Ok((Status::Ok, risk_status_str));
+    return (
+        Status::Ok,
+        json!({"status": "successful", "data":Value::from(risk_data).to_string(), "len": len})
+    );
 }
 
 #[derive(FromForm)]
