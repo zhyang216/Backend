@@ -15,6 +15,7 @@ use db_lib::{database, RAND};
 mod auth;
 use auth::{forget, login, signup, user_center};
 mod risk;
+mod order;
 
 #[get("/")]
 fn index() -> RawHtml<&'static str> {
@@ -122,6 +123,7 @@ async fn main() {
         )
         .mount("/", routes![forget_page, forget::forget_password])
         .mount("/", routes![risk::get_risk_status, risk::update_risk])
+        .mount("/", routes![order::route::place_order, order::route::get_order])
         .launch()
         .await
         .expect("Failed to launch rocket");
