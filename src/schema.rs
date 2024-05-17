@@ -129,6 +129,7 @@ diesel::table! {
 
 diesel::joinable!(intra_account_transfer_requests -> positions (position_id));
 diesel::joinable!(orders -> quotations (quotation_id));
+diesel::joinable!(portfolio_balance -> currencies (currency_id));
 diesel::joinable!(portfolio_balance -> portfolios (portfolio_id));
 diesel::joinable!(portfolios -> accounts (trader_account_id));
 diesel::joinable!(positions -> portfolios (portfolio_id));
