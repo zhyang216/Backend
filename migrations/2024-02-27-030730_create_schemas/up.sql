@@ -110,7 +110,7 @@ CREATE TABLE IF NOT EXISTS accounts (
 CREATE TABLE IF NOT EXISTS portfolios ( -- 多種幣對（部位）的組合
     id SERIAL PRIMARY KEY ,
     name VARCHAR(50) NOT NULL UNIQUE,
-    time_stamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    time_stamp TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     -- trading_pair_id INTEGER NOT NULL, -- 幣對 ID 透過 balance 可判斷
     -- admin_account_id SERIAL REFERENCES accounts(id) NOT NULL,
     trader_account_id SERIAL REFERENCES accounts(id) NOT NULL,

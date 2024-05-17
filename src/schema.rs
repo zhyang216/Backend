@@ -77,7 +77,7 @@ diesel::table! {
         id -> Int4,
         #[max_length = 50]
         name -> Varchar,
-        time_stamp -> Nullable<Timestamp>,
+        time_stamp -> Timestamp,
         trader_account_id -> Int4,
         portfolio_type -> Int4,
     }
