@@ -109,12 +109,13 @@ CREATE TABLE IF NOT EXISTS accounts (
 -- 投資組合
 CREATE TABLE IF NOT EXISTS portfolios ( -- 多種幣對（部位）的組合
     id SERIAL PRIMARY KEY ,
-    time_stamp TIMESTAMP NOT NULL,
+    name VARCHAR(50) NOT NULL UNIQUE,
+    time_stamp TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
     -- trading_pair_id INTEGER NOT NULL, -- 幣對 ID 透過 balance 可判斷
     -- admin_account_id SERIAL REFERENCES accounts(id) NOT NULL,
     trader_account_id SERIAL REFERENCES accounts(id) NOT NULL,
     portfolio_type INTEGER NOT NULL -- 0: 一般策略, 1: 雜費, 2: 剩餘資金
-    -- available_balance DECIMAL(28, 8) NOT NULL, -- 可動用資金
+    -- available_balance DECIMAL(28, 8) NOT NULL, -- 可動用資金 
 );
 
 -- 投組餘額
@@ -201,7 +202,10 @@ CREATE TABLE IF NOT EXISTS risk_management (
 
 -- After all tables are created, add foreign key constraints
 ALTER TABLE sessions ADD CONSTRAINT fk_sessions_user_id FOREIGN KEY (user_id) REFERENCES accounts(id) ON DELETE CASCADE;
-
+-- Add currencies
+INSERT INTO currencies (code, name) VALUES ('BTC', 'BTC dollar');
+INSERT INTO currencies (code, name) VALUES ('ETH', 'ETH dollar');
+INSERT INTO currencies (code, name) VALUES ('USDT', 'USDT dollar');
 -- ALTER TABLE bbgo_start_info ADD CONSTRAINT fk_bbgo_api_keys_id FOREIGN KEY (api_keys_id) REFERENCES exchange_api_keys(id);
 -- ALTER TABLE bbgo_start_info ADD CONSTRAINT fk_bbgo_pair_id FOREIGN KEY (pair_id) REFERENCES trading_pairs(id);
 -- ALTER TABLE bbgo_start_info ADD CONSTRAINT fk_bbgo_strategy_id FOREIGN KEY (strategy_id) REFERENCES trading_strategy(id);
