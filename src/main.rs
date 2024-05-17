@@ -13,13 +13,15 @@ use std::sync::{Arc, Mutex};
 mod db_lib;
 use db_lib::{database, RAND};
 mod auth;
-use auth::{user_center, signup, login, forget};
+use auth::{forget, login, signup, user_center};
 mod portfolio;
-use portfolio::{change_portfolio::change_portfolio, create_portfolio::add_portfolio, remove_portfolio::remove_portfolio, get_portfolio::get_portfolio_names};
+use portfolio::{
+    change_portfolio::change_portfolio, create_portfolio::add_portfolio,
+    get_portfolio::get_portfolio_names, remove_portfolio::remove_portfolio,
+};
 
-mod risk;
 mod order;
-
+mod risk;
 
 #[get("/")]
 fn index() -> RawHtml<&'static str> {
@@ -68,19 +70,16 @@ async fn forget_page(
     return Ok(RawHtml(include_str!("../static/forget.html")));
 }
 
-
 #[get("/api/portfolio")]
 async fn portfolio_page(
-    mut accounts_db_coon: Connection<database::PgDb>, 
-    cookies: &CookieJar<'_>
+    mut accounts_db_coon: Connection<database::PgDb>,
+    cookies: &CookieJar<'_>,
 ) -> Result<RawHtml<&'static str>, (Status, &'static str)> {
-    
     if let None = user_center::get_logged_in_user_id(cookies, &mut accounts_db_coon).await {
         return Err((Status::BadRequest, "Not yet logged in."));
     }
     return Ok(RawHtml(include_str!("../static/portfolio.html")));
 }
-
 
 //TO DO get(reset_page)
 /*
@@ -140,10 +139,21 @@ async fn main() {
             ],
         )
         .mount("/", routes![forget_page, forget::forget_password])
-        .mount("/", routes![portfolio_page, portfolio::create_portfolio::add_portfolio, portfolio::remove_portfolio::remove_portfolio, 
-        portfolio::get_portfolio::get_portfolio_names, portfolio::change_portfolio::change_portfolio])
+        .mount(
+            "/",
+            routes![
+                portfolio_page,
+                portfolio::create_portfolio::add_portfolio,
+                portfolio::remove_portfolio::remove_portfolio,
+                portfolio::get_portfolio::get_portfolio_names,
+                portfolio::change_portfolio::change_portfolio
+            ],
+        )
         .mount("/", routes![risk::get_risk_status, risk::update_risk])
-        .mount("/", routes![order::route::place_order, order::route::get_order])
+        .mount(
+            "/",
+            routes![order::route::place_order, order::route::get_order],
+        )
         .launch()
         .await
         .expect("Failed to launch rocket");

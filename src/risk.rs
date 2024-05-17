@@ -4,12 +4,12 @@ use rocket_db_pools::diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
 use rocket_db_pools::Connection;
 
 use crate::auth::user_center::get_logged_in_user_id;
+use crate::auth::validation::UserAuth;
 use crate::db_lib::database;
 use crate::db_lib::schema::{portfolios, risk_management};
-use rocket_db_pools::diesel::prelude::*;
-use serde::{Serialize, Deserialize};
 use rocket::serde::json::{json, Value};
-use crate::auth::validation::UserAuth;
+use rocket_db_pools::diesel::prelude::*;
+use serde::{Deserialize, Serialize};
 #[get("/api/risk")]
 pub(crate) async fn get_risk_status(
     mut db_conn: Connection<database::PgDb>,
@@ -45,19 +45,21 @@ pub(crate) async fn get_risk_status(
     let risk_status = if let Ok(risk_status) = fetch_risk_status {
         risk_status
     } else {
-        return (Status::BadRequest,
-             json!({"status":"error", "message":"Risk staqtus not found"}));
+        return (
+            Status::BadRequest,
+            json!({"status":"error", "message":"Risk staqtus not found"}),
+        );
     };
 
     // return risk status
-    let mut risk_data:Vec<Value> = vec!();
+    let mut risk_data: Vec<Value> = vec![];
     let len = risk_status.len();
     for (risk_type, valid, pnl, position, portfolio_id) in risk_status {
         risk_data.push(json!({"type": risk_type, "on": valid, "pnl": pnl, "position": position, "portfolio_id": portfolio_id}));
     }
     return (
         Status::Ok,
-        json!({"status": "successful", "data":Value::from(risk_data).to_string(), "len": len})
+        json!({"status": "successful", "data":Value::from(risk_data).to_string(), "len": len}),
     );
 }
 
@@ -110,15 +112,14 @@ pub(crate) async fn update_risk(
     } else {
         // if the risk management data exists
         // fisrt, check the ownership
-        let user_id =
-            if let Some(user_id) = get_logged_in_user_id(cookies, &mut db_conn).await {
-                user_id
-            } else {
-                return Err((
-                    Status::BadRequest,
-                    "Cannot fetch user id based on session token cookie or cookie crushed.",
-                ));
-            };
+        let user_id = if let Some(user_id) = get_logged_in_user_id(cookies, &mut db_conn).await {
+            user_id
+        } else {
+            return Err((
+                Status::BadRequest,
+                "Cannot fetch user id based on session token cookie or cookie crushed.",
+            ));
+        };
 
         let fetch_user_id = portfolios::table
             .filter(portfolios::id.eq(risk_data.portfolio_id))

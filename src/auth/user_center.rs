@@ -85,8 +85,7 @@ pub(crate) async fn reset_password(
     cookies: &CookieJar<'_>,
 ) -> Result<Redirect, (Status, &'static str)> {
     // ensure the user is logged in
-    let user_id = if let Some(user_id) = get_logged_in_user_id(cookies, &mut db_conn).await
-    {
+    let user_id = if let Some(user_id) = get_logged_in_user_id(cookies, &mut db_conn).await {
         user_id
     } else {
         return Err((
@@ -116,12 +115,7 @@ pub(crate) async fn reset_password(
         return Err((Status::BadRequest, "Current password wrong."));
     }
 
-    set_new_password(
-        user_id,
-        reset_password_info.new_password,
-        &mut db_conn,
-    )
-    .await
+    set_new_password(user_id, reset_password_info.new_password, &mut db_conn).await
 }
 
 // remove the session token from both the server(database) and the client(cookie)
@@ -131,12 +125,11 @@ pub(crate) async fn logout(
     cookies: &CookieJar<'_>,
 ) -> Result<Redirect, (Status, &'static str)> {
     // Ensure the user is logged in
-    let user_id =
-        if let Some(user_id) = get_logged_in_user_id(&cookies, &mut db_conn).await {
-            user_id
-        } else {
-            return Err((Status::BadRequest, "Not logged in."));
-        };
+    let user_id = if let Some(user_id) = get_logged_in_user_id(&cookies, &mut db_conn).await {
+        user_id
+    } else {
+        return Err((Status::BadRequest, "Not logged in."));
+    };
 
     // remove session token from server(database) and client(cookie)
     cookies.remove_private(USER_COOKIE_NAME);

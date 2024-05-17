@@ -8,11 +8,11 @@ use pbkdf2::password_hash::PasswordHash;
 use pbkdf2::{password_hash::PasswordVerifier, Pbkdf2};
 use rocket::http::{Cookie, CookieJar, Status};
 use rocket::serde::json::Json;
+use rocket::serde::json::{json, Value};
 use rocket::State;
 use rocket_db_pools::diesel::prelude::RunQueryDsl;
 use rocket_db_pools::Connection;
-use serde::{Serialize, Deserialize};
-use rocket::serde::json::{json, Value};
+use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize)]
 pub(crate) struct LoginInfo<'r> {
@@ -53,7 +53,7 @@ pub(crate) async fn login(
     ) {
         return (
             Status::BadRequest,
-            json!({"status":"error", "message":"Wrong password."})
+            json!({"status":"error", "message":"Wrong password."}),
         );
     }
 
@@ -64,15 +64,12 @@ pub(crate) async fn login(
             let cookie_value = token.into_cookie_value();
             cookies.add_private(Cookie::build((USER_COOKIE_NAME, cookie_value.clone()))); // default expire time: one week from now
 
-            return (
-                Status::Ok,
-                json!({"status":"successful"})
-            );
+            return (Status::Ok, json!({"status":"successful"}));
         }
         Err(session_err) => {
             return (
                 Status::ServiceUnavailable,
-                json!({"status":"error", "message": session_err})
+                json!({"status":"error", "message": session_err}),
             );
         }
     }

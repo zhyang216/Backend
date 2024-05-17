@@ -53,13 +53,13 @@ async fn get_trading_pair_id(
     trading_pair: (&String, &String),
 ) -> Result<(i32, i32), &'static str> {
     let base = get_currency_id(db_conn, trading_pair.0)
-            .await
-            .expect("Fetch base failed");
-	let quote = get_currency_id(db_conn, trading_pair.1)
-		.await
-		.expect("Fetch quote failed");
-	
-	let fetch_trading_pair = trading_pairs::table
+        .await
+        .expect("Fetch base failed");
+    let quote = get_currency_id(db_conn, trading_pair.1)
+        .await
+        .expect("Fetch quote failed");
+
+    let fetch_trading_pair = trading_pairs::table
         .filter(trading_pairs::base_currency_id.eq(base))
         .filter(trading_pairs::quote_currency_id.eq(quote))
         .select((
@@ -69,7 +69,6 @@ async fn get_trading_pair_id(
         .first::<(i32, i32)>(db_conn)
         .await;
     if let Ok((base, quote)) = fetch_trading_pair {
-        
         return Ok((base, quote));
     } else {
         return Err("Fail to fetch trading pair");
@@ -140,7 +139,7 @@ pub(crate) async fn get_order(
             "price": price
         }));
     }
-	let len = response_data.len();
+    let len = response_data.len();
     return (
         Status::Ok,
         json!({"status": "successful", "data":Value::from(response_data).to_string(), "len": len}),
@@ -169,31 +168,33 @@ pub(crate) async fn place_order(
         &order_data.price,
         &order_data.quantity,
     );
-	let trading_pairs = get_trading_pair_id(&mut db_conn, (&order_data.base, &order_data.quote)).await.unwrap();
-	let fetch_quotation = quotations::table
-	    .inner_join(positions::table.on(quotations::position_id.eq(positions::id)))
-		.inner_join(portfolios::table.on(portfolios::id.eq(positions::portfolio_id)))
-		.filter(quotations::base_currency_id.eq(trading_pairs.0))
-		.filter(quotations::base_currency_id.eq(trading_pairs.0))
-		.filter(portfolios::trader_account_id.eq(user_id))
-		.select(quotations::id)
-		.first::<i32>(&mut db_conn)
-		.await
-		.unwrap();
-	let insert_order = rocket_db_pools::diesel::insert_into(orders::table)
-		.values((
-			orders::quotation_id.eq(fetch_quotation),
-			orders::state.eq(0),
-			orders::buyin.eq(order_data.order_type == "buy"),
-			orders::price.eq(order_data.price.parse::<i64>().unwrap()),
-			orders::qty.eq(order_data.quantity.parse::<i64>().unwrap()),
-		))
-		.returning(orders::id)
-		.get_result::<i32>(&mut db_conn)
-		.await
-		.unwrap();
-	return (
-		Status::Ok,
-		json!({"status": "successful", "data": order_id}),
-	);
+    let trading_pairs = get_trading_pair_id(&mut db_conn, (&order_data.base, &order_data.quote))
+        .await
+        .unwrap();
+    let fetch_quotation = quotations::table
+        .inner_join(positions::table.on(quotations::position_id.eq(positions::id)))
+        .inner_join(portfolios::table.on(portfolios::id.eq(positions::portfolio_id)))
+        .filter(quotations::base_currency_id.eq(trading_pairs.0))
+        .filter(quotations::base_currency_id.eq(trading_pairs.0))
+        .filter(portfolios::trader_account_id.eq(user_id))
+        .select(quotations::id)
+        .first::<i32>(&mut db_conn)
+        .await
+        .unwrap();
+    let insert_order = rocket_db_pools::diesel::insert_into(orders::table)
+        .values((
+            orders::quotation_id.eq(fetch_quotation),
+            orders::state.eq(0),
+            orders::buyin.eq(order_data.order_type == "buy"),
+            orders::price.eq(order_data.price.parse::<i64>().unwrap()),
+            orders::qty.eq(order_data.quantity.parse::<i64>().unwrap()),
+        ))
+        .returning(orders::id)
+        .get_result::<i32>(&mut db_conn)
+        .await
+        .unwrap();
+    return (
+        Status::Ok,
+        json!({"status": "successful", "data": order_id}),
+    );
 }
