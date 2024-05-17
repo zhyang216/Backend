@@ -22,12 +22,12 @@ pub(crate) struct RemovePortfolioInfo<'r> {
 #[post("/remove_portfolio", data = "<remove_portfolio_info>")]
 pub(crate) async fn remove_portfolio(
     remove_portfolio_info: Form<Strict<RemovePortfolioInfo<'_>>>, 
-    mut accounts_db_coon: Connection<database::AccountsDb>, 
+    mut db_coon: Connection<database::PgDb>, 
     cookies: &CookieJar<'_>
 ) -> Result<Status, (Status, &'static str)> {
 
     // ensure the user is logged in
-    if let Some(_) = user_center::get_logged_in_user_id(cookies, &mut accounts_db_coon).await {
+    if let Some(_) = user_center::get_logged_in_user_id(cookies, &mut db_coon).await {
     } else {
         return Err((Status::BadRequest, "Cannot fetch user id based on session token cookie or cookie crushed."));
     };
@@ -35,7 +35,7 @@ pub(crate) async fn remove_portfolio(
     // get portfolio's id
     let portfolio_id_result: Result<i32, _> = portfolios::table.filter(portfolios::name.eq(remove_portfolio_info.name))
     .select(portfolios::id)
-    .first(&mut accounts_db_coon)
+    .first(&mut db_coon)
     .await;
 
     let portfolio_id = match portfolio_id_result {
@@ -47,12 +47,12 @@ pub(crate) async fn remove_portfolio(
 
     // delete portfolio_balance 
     let portfolio_balance = diesel::delete(portfolio_balance::table.filter(portfolio_balance::portfolio_id.eq(portfolio_id)))
-    .execute(&mut accounts_db_coon)
+    .execute(&mut db_coon)
     .await;
 
     // delete portfolio
     let portfolio = diesel::delete(portfolios::table.filter(portfolios::id.eq(portfolio_id)))
-    .execute(&mut accounts_db_coon)
+    .execute(&mut db_coon)
     .await;
 
     match portfolio_balance {

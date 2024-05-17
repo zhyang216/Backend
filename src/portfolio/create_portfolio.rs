@@ -24,12 +24,12 @@ pub(crate) struct AddPortfolioInfo<'r> {
 #[post("/add_portfolio", data = "<add_portfolio_info>")]
 pub(crate) async fn add_portfolio(
     add_portfolio_info: Form<Strict<AddPortfolioInfo<'_>>>, 
-    mut accounts_db_coon: Connection<database::AccountsDb>,
+    mut db_coon: Connection<database::PgDb>,
     cookies: &CookieJar<'_>
 ) -> Result<Status, (Status, &'static str)> {
 
     // ensure the user is logged in
-    let user_id = if let Some(user_id) = user_center::get_logged_in_user_id(cookies, &mut accounts_db_coon).await {
+    let user_id = if let Some(user_id) = user_center::get_logged_in_user_id(cookies, &mut db_coon).await {
         user_id
     } else {
         return Err((Status::BadRequest, "Cannot fetch user id based on session token cookie or cookie crushed."));
@@ -43,14 +43,14 @@ pub(crate) async fn add_portfolio(
         portfolios::trader_account_id.eq(user_id),
         portfolios::portfolio_type.eq(0),
     ))
-    .execute(&mut accounts_db_coon).await;
+    .execute(&mut db_coon).await;
 
     let portfolio_balance = rocket_db_pools::diesel::insert_into(portfolio_balance::table)
     .values((
         portfolio_balance::quantity.eq(sql::<BigInt>(&add_portfolio_info.amount.to_string())),
         portfolio_balance::currency_id.eq(add_portfolio_info.currency_id)
     ))
-    .execute(&mut accounts_db_coon).await;
+    .execute(&mut db_coon).await;
     
     match portfolio_id {
         Ok(_) => {

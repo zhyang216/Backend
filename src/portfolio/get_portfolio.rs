@@ -16,18 +16,18 @@ use crate::db_lib::schema::{sessions, accounts, portfolios, portfolio_balance};
 
 #[get("/get_portfolio_names")]
 pub(crate) async fn get_portfolio_names(
-    mut accounts_db_coon: Connection<database::AccountsDb>, 
+    mut db_coon: Connection<database::PgDb>, 
     cookies: &CookieJar<'_>
 ) -> Result<Json<(Vec<(String, i64, i32)>, usize)>, Status> {
     // ensure the user is logged in
-    if user_center::get_logged_in_user_id(cookies, &mut accounts_db_coon).await.is_none() {
+    if user_center::get_logged_in_user_id(cookies, &mut db_coon).await.is_none() {
         return Err(Status::BadRequest);
     }
 
     // find all portfolios
     let portfolio_names_result: Result<Vec<String>, _> = portfolios::table
         .select(portfolios::name)
-        .load(&mut accounts_db_coon)
+        .load(&mut db_coon)
         .await;
 
     match portfolio_names_result {
@@ -47,7 +47,7 @@ pub(crate) async fn get_portfolio_names(
                     ),
                     (portfolio_balance::quantity, portfolio_balance::currency_id)
                 )
-                .first(&mut accounts_db_coon)
+                .first(&mut db_coon)
                 .await;
             
                 match balance_result {

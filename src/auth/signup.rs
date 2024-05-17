@@ -1,13 +1,13 @@
+use crate::db_lib::database;
+use crate::db_lib::schema;
 use ::diesel::ExpressionMethods;
 use pbkdf2::password_hash::PasswordHasher;
 use rocket::http::Status;
+use rocket::serde::json::Json;
+use rocket::serde::json::{json, Value};
 use rocket_db_pools::diesel::prelude::RunQueryDsl;
 use rocket_db_pools::Connection;
-use rocket::serde::json::Json;
-use crate::db_lib::database;
-use crate::db_lib::schema;
-use serde::{Serialize, Deserialize};
-use rocket::serde::json::{json, Value};
+use serde::{Deserialize, Serialize};
 // use crate::types::ResponseData;
 // The signup info of the user. Simple constraints are checked in the front end (html).
 #[derive(Serialize, Deserialize)]
@@ -32,7 +32,10 @@ pub(crate) async fn signup(
     let hashed_password = if let Ok(_password) = password_hash {
         _password.to_string()
     } else {
-        return (Status::BadRequest, json!({"message": "The password is invalid."}));
+        return (
+            Status::BadRequest,
+            json!({"message": "The password is invalid."}),
+        );
     };
 
     // inser the signup user data into the database
@@ -43,8 +46,9 @@ pub(crate) async fn signup(
             schema::accounts::password.eq(&hashed_password),
             schema::accounts::account_type.eq(signup_info.user_type),
         ))
-        .execute(&mut accounts_db_coon).await;
-    
+        .execute(&mut db_conn)
+        .await;
+
     // No need to create default portfolio.
     // match signup_user_id{
     //     Ok(id) => {
@@ -57,13 +61,13 @@ pub(crate) async fn signup(
     //             schema::portfolios::portfolio_type.eq(2),
     //         ))
     //         .execute(&mut accounts_db_coon).await;
-            
+
     //         let main_portfolio_balance = rocket_db_pools::diesel::insert_into(schema::portfolio_balance::table)
     //         .values((
     //             schema::portfolio_balance::quantity.eq(0),
     //         ))
     //         .execute(&mut accounts_db_coon).await;
-        
+
     //         return Ok(Status::Ok);
     //     }
     //     Err(err) => {
@@ -72,15 +76,16 @@ pub(crate) async fn signup(
     //     }
     // }
 
-        
-
     // if the user data is inserted successfully, redirect to login page
     match signup_user_id {
         Ok(_) => {
             return (Status::Ok, json!({"status": "successful"}));
         }
         Err(_) => {
-            return (Status::BadRequest, json!({"message": "Account already exist."}));
+            return (
+                Status::BadRequest,
+                json!({"message": "Account already exist."}),
+            );
         }
     }
 }

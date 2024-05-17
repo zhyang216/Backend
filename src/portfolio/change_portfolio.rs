@@ -23,11 +23,11 @@ pub(crate) struct ChangePortfolioInfo<'r> {
 #[post("/change_portfolio", data = "<change_portfolio_info>")]
 pub(crate) async fn change_portfolio(
     change_portfolio_info: Form<Strict<ChangePortfolioInfo<'_>>>, 
-    mut accounts_db_coon: Connection<database::AccountsDb>,
+    mut db_coon: Connection<database::PgDb>,
     cookies: &CookieJar<'_>
 ) -> Result<Status, (Status, &'static str)> {
     // ensure the user is logged in
-    let user_id = if let Some(user_id) = user_center::get_logged_in_user_id(cookies, &mut accounts_db_coon).await {
+    let user_id = if let Some(user_id) = user_center::get_logged_in_user_id(cookies, &mut db_coon).await {
         user_id
     } else {
         return Err((Status::BadRequest, "Cannot fetch user id based on session token cookie or cookie crushed."));
@@ -37,7 +37,7 @@ pub(crate) async fn change_portfolio(
     let portfolio_id_result: Result<i32, _> = portfolios::table
         .filter(portfolios::name.eq(&change_portfolio_info.name))
         .select(portfolios::id)
-        .first(&mut accounts_db_coon)
+        .first(&mut db_coon)
         .await;
 
     let portfolio_id = match portfolio_id_result {
@@ -50,7 +50,7 @@ pub(crate) async fn change_portfolio(
     // update portfolio_balance 
     let update_result = diesel::update(portfolio_balance::table.filter(portfolio_balance::portfolio_id.eq(portfolio_id)))
         .set(portfolio_balance::quantity.eq(change_portfolio_info.amount as i64))
-        .execute(&mut accounts_db_coon)
+        .execute(&mut db_coon)
         .await;
 
     match update_result {

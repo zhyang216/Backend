@@ -13,6 +13,7 @@ use std::sync::{Arc, Mutex};
 mod db_lib;
 use db_lib::{database, RAND};
 mod auth;
+use auth::{user_center, signup, login, forget};
 mod portfolio;
 use portfolio::{change_portfolio::change_portfolio, create_portfolio::add_portfolio, remove_portfolio::remove_portfolio, get_portfolio::get_portfolio_names};
 
@@ -70,7 +71,7 @@ async fn forget_page(
 
 #[get("/api/portfolio")]
 async fn portfolio_page(
-    mut accounts_db_coon: Connection<database::AccountsDb>, 
+    mut accounts_db_coon: Connection<database::PgDb>, 
     cookies: &CookieJar<'_>
 ) -> Result<RawHtml<&'static str>, (Status, &'static str)> {
     
