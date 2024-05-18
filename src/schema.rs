@@ -77,7 +77,7 @@ diesel::table! {
         id -> Int4,
         #[max_length = 50]
         name -> Varchar,
-        time_stamp -> Nullable<Timestamp>,
+        time_stamp -> Timestamp,
         trader_account_id -> Int4,
         portfolio_type -> Int4,
     }
@@ -129,6 +129,7 @@ diesel::table! {
 
 diesel::joinable!(intra_account_transfer_requests -> positions (position_id));
 diesel::joinable!(orders -> quotations (quotation_id));
+diesel::joinable!(portfolio_balance -> currencies (currency_id));
 diesel::joinable!(portfolio_balance -> portfolios (portfolio_id));
 diesel::joinable!(portfolios -> accounts (trader_account_id));
 diesel::joinable!(positions -> portfolios (portfolio_id));
