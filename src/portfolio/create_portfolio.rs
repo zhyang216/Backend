@@ -24,6 +24,7 @@ pub struct Position<'r> {
 pub(crate) struct AddPortfolioInfo<'r> {
     name: &'r str,
     amount: &'r str,
+    currency_id: &'r str,
     portfolio_type: &'r str,
     position: Vec<Position<'r>>,
 }
@@ -70,9 +71,20 @@ pub(crate) async fn add_portfolio(
         }
     };
 
+    let currency_id: i32 = match add_portfolio_info.currency_id.parse() {
+        Ok(value) => value,
+        Err(_) => {
+            return (
+                Status::BadRequest,
+                json!({"message": "Invalid portfolio_type value"}),
+            );
+        }
+    };
+
     let portfolio_balance_result = rocket_db_pools::diesel::insert_into(portfolio_balance::table)
         .values((
             portfolio_balance::portfolio_id.eq(portfolio_id),
+            portfolio_balance::currency_id.eq(currency_id),
             portfolio_balance::quantity.eq(sql::<BigInt>(&add_portfolio_info.amount.to_string())),
         ))
         .returning(portfolio_balance::id)

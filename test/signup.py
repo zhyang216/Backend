@@ -10,6 +10,6 @@ data = {
   "email": "admin@localhost",
 }
 
-res = session_requests.post(config.url + 'auth/singup', json=data)
+res = session_requests.post(config.url + 'auth/user', json=data)
 print(res)
 print(json.loads(res.text))

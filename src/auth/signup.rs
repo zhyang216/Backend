@@ -21,7 +21,7 @@ pub(crate) struct SignupInfo<'r> {
 // TODO, signup is available only when not logged in
 // if signup sucessfully, redirect to login page. (It won't log in automatically)
 // Otherwise, return Status::BadRequest and a string indicating the error. (It is not fancy at all :< )
-#[post("/api/auth/signup", data = "<signup_info>")]
+#[post("/api/auth/user", data = "<signup_info>")]
 pub(crate) async fn signup(
     signup_info: Json<SignupInfo<'_>>,
     mut db_conn: Connection<database::PgDb>,
