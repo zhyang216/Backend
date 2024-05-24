@@ -123,7 +123,7 @@ CREATE TABLE IF NOT EXISTS portfolio_balance (
     id SERIAL PRIMARY KEY ,
     portfolio_id SERIAL REFERENCES portfolios(id) NOT NULL,
     quantity BIGINT NOT NULL DEFAULT 0,
-    currency_id INTEGER REFERENCES currencies(id) NOT NULL
+    currency_id INTEGER NOT NULL DEFAULT 1 REFERENCES currencies(id)
 );
 
 -- 部位
