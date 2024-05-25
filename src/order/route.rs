@@ -1,5 +1,4 @@
 use rocket::http::Status;
-use rocket_db_pools::diesel::{ExpressionMethods, QueryDsl, RunQueryDsl};
 use rocket_db_pools::Connection;
 
 use crate::auth::validation::UserAuth;

@@ -8,8 +8,7 @@ use crate::auth::validation::UserAuth;
 use crate::db_lib::database;
 use crate::db_lib::schema::{portfolios, risk_management};
 use rocket::serde::json::{json, Value};
-use rocket_db_pools::diesel::prelude::*;
-use serde::{Deserialize, Serialize};
+
 #[get("/api/risk")]
 pub(crate) async fn get_risk_status(
     mut db_conn: Connection<database::PgDb>,
