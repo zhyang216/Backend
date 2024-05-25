@@ -1,53 +1,46 @@
 use ::diesel::ExpressionMethods;
-use diesel::dsl::sql;
 use diesel::query_dsl::methods::{FilterDsl, SelectDsl};
-use diesel::query_dsl::JoinOnDsl;
-use diesel::sql_types::BigInt;
-use rocket::form::{Form, Strict};
-use rocket::http::{CookieJar, Status};
-use rocket::response::Redirect;
+use rocket::http::Status;
 use rocket::serde::json::Json;
+use rocket::serde::json::{json, Value};
 use rocket_db_pools::diesel::prelude::RunQueryDsl;
 use rocket_db_pools::{diesel, Connection};
+use serde::{Deserialize, Serialize};
 
-use crate::auth::user_center;
-use crate::db_lib::schema::{accounts, portfolio_balance, portfolios, sessions};
-use crate::db_lib::{database, USER_COOKIE_NAME};
+use crate::auth::validation::UserAuth;
+use crate::db_lib::schema::{portfolio_balance, portfolios};
+use crate::db_lib::database;
 
-#[derive(FromForm)]
-pub(crate) struct ChangePortfolioInfo<'r> {
+#[derive(Serialize, Deserialize)]
+pub struct ChangePortfolioInfo<'r> {
     name: &'r str,
     amount: i32,
 }
 
-#[post("/change_portfolio", data = "<change_portfolio_info>")]
+#[put("/api/portfolio", data = "<change_portfolio_info>")]
 pub(crate) async fn change_portfolio(
-    change_portfolio_info: Form<Strict<ChangePortfolioInfo<'_>>>,
-    mut db_coon: Connection<database::PgDb>,
-    cookies: &CookieJar<'_>,
-) -> Result<Status, (Status, &'static str)> {
+    change_portfolio_info: Json<ChangePortfolioInfo<'_>>,
+    mut db_conn: Connection<database::PgDb>,
+    _user_auth: UserAuth,
+) -> (Status, Value) {
+
     // ensure the user is logged in
-    let user_id =
-        if let Some(user_id) = user_center::get_logged_in_user_id(cookies, &mut db_coon).await {
-            user_id
-        } else {
-            return Err((
-                Status::BadRequest,
-                "Cannot fetch user id based on session token cookie or cookie crushed.",
-            ));
-        };
+    let _user_id = _user_auth.user_id;
 
     // get portfolio's id
     let portfolio_id_result: Result<i32, _> = portfolios::table
         .filter(portfolios::name.eq(&change_portfolio_info.name))
         .select(portfolios::id)
-        .first(&mut db_coon)
+        .first(&mut db_conn)
         .await;
 
-    let portfolio_id = match portfolio_id_result {
+    let portfolio_id: i32 = match portfolio_id_result {
         Ok(id) => id,
         Err(_) => {
-            return Err((Status::BadRequest, "The portfolio does not exist"));
+            return (
+                Status::BadRequest,
+                json!({"message": "The portfolio does not exist"}),
+            );
         }
     };
 
@@ -56,23 +49,27 @@ pub(crate) async fn change_portfolio(
         portfolio_balance::table.filter(portfolio_balance::portfolio_id.eq(portfolio_id)),
     )
     .set(portfolio_balance::quantity.eq(change_portfolio_info.amount as i64))
-    .execute(&mut db_coon)
+    .execute(&mut db_conn)
     .await;
 
     match update_result {
         Ok(updated_records) => {
             if updated_records == 0 {
                 // not find matched portfolio
-                return Err((Status::BadRequest, "Portfolio balance not found"));
+                return (
+                    Status::BadRequest,
+                    json!({"message": "Portfolio balance not found"}),
+                );
             } else {
-                return Ok(Status::Ok);
+                return (Status::Ok, json!({"status":"successful"}));
             }
         }
         Err(_) => {
-            return Err((
+            return (
                 Status::InternalServerError,
-                "Failed to update portfolio balance",
-            ));
+                json!({"message": "Failed to update portfolio balance"}),
+            );
         }
     }
+
 }

@@ -1,50 +1,47 @@
 use ::diesel::ExpressionMethods;
-use diesel::dsl::sql;
 use diesel::query_dsl::methods::{FilterDsl, SelectDsl};
-use diesel::query_dsl::JoinOnDsl;
-use diesel::sql_types::BigInt;
-use rocket::form::{Form, Strict};
-use rocket::http::{CookieJar, Status};
-use rocket::response::Redirect;
+use diesel::result::Error;
+use rocket::http::Status;
 use rocket::serde::json::Json;
+use rocket::serde::json::{json, Value};
 use rocket_db_pools::diesel::prelude::RunQueryDsl;
 use rocket_db_pools::{diesel, Connection};
+use serde::{Deserialize, Serialize};
 
-use crate::auth::user_center;
-use crate::db_lib::schema::{accounts, portfolio_balance, portfolios, sessions};
-use crate::db_lib::{database, USER_COOKIE_NAME};
 
-#[derive(FromForm)]
+use crate::auth::validation::UserAuth;
+use crate::db_lib::schema::{portfolio_balance, portfolios, trading_pairs, positions};
+use crate::db_lib::database;
+
+#[derive(Serialize, Deserialize)]
 pub(crate) struct RemovePortfolioInfo<'r> {
     name: &'r str,
 }
 
-#[post("/remove_portfolio", data = "<remove_portfolio_info>")]
+#[delete("/api/portfolio", data = "<remove_portfolio_info>")]
 pub(crate) async fn remove_portfolio(
-    remove_portfolio_info: Form<Strict<RemovePortfolioInfo<'_>>>,
-    mut db_coon: Connection<database::PgDb>,
-    cookies: &CookieJar<'_>,
-) -> Result<Status, (Status, &'static str)> {
+    remove_portfolio_info: Json<RemovePortfolioInfo<'_>>,
+    mut db_conn: Connection<database::PgDb>,
+    _user_auth: UserAuth,
+) -> (Status, Value) {
+
     // ensure the user is logged in
-    if let Some(_) = user_center::get_logged_in_user_id(cookies, &mut db_coon).await {
-    } else {
-        return Err((
-            Status::BadRequest,
-            "Cannot fetch user id based on session token cookie or cookie crushed.",
-        ));
-    };
+    let _user_id = _user_auth.user_id;
 
     // get portfolio's id
     let portfolio_id_result: Result<i32, _> = portfolios::table
         .filter(portfolios::name.eq(remove_portfolio_info.name))
         .select(portfolios::id)
-        .first(&mut db_coon)
+        .first(&mut db_conn)
         .await;
 
-    let portfolio_id = match portfolio_id_result {
+    let portfolio_id: i32 = match portfolio_id_result {
         Ok(id) => id,
         Err(_) => {
-            return Err((Status::BadRequest, "The portfolio does not exist"));
+            return (
+                Status::BadRequest,
+                json!({"message": "The portfolio does not exist"}),
+            );
         }
     };
 
@@ -52,26 +49,84 @@ pub(crate) async fn remove_portfolio(
     let portfolio_balance = diesel::delete(
         portfolio_balance::table.filter(portfolio_balance::portfolio_id.eq(portfolio_id)),
     )
-    .execute(&mut db_coon)
+    .execute(&mut db_conn)
     .await;
+
+    match portfolio_balance {
+        Ok(_) => (),
+        Err(_) => {
+            return (
+                Status::InternalServerError,
+                json!({"message": "Error deleting portfolio_balance"}),
+            );
+        }
+    }
+
+    let trading_pair_ids_result: Result<Vec<i32>, Error> = positions::table
+        .filter(positions::portfolio_id.eq(portfolio_id))
+        .select(positions::trading_pair_id)
+        .load(&mut db_conn)
+        .await;
+
+    let trading_pair_ids  = match trading_pair_ids_result {
+        Ok(ids) => ids,
+        Err(_err) => {
+            return (
+                Status::InternalServerError,
+                json!({"message": "Error fetching positions"}),
+            );
+        }
+    };
+
+    // delete positions
+    let deleted_positions = diesel::delete(
+        positions::table.filter(positions::portfolio_id.eq(portfolio_id))
+    )
+    .execute(&mut db_conn)
+    .await;
+
+    match deleted_positions {
+        Ok(_) => (),
+        Err(_) => {
+            return (
+                Status::InternalServerError,
+                json!({"message": "Error deleting positions"}),
+            );
+        }
+    }
+
+    // delete trading_pairs
+    for trading_pair_id in trading_pair_ids {
+        let deleted_trading_pair = diesel::delete(
+            trading_pairs::table.filter(trading_pairs::id.eq(trading_pair_id))
+        )
+        .execute(&mut db_conn)
+        .await;
+
+        match deleted_trading_pair {
+            Ok(_) => (),
+            Err(_) => {
+                return (
+                    Status::InternalServerError,
+                    json!({"message": "Error deleting trading pair"}),
+                );
+            }
+        }
+    }
 
     // delete portfolio
     let portfolio = diesel::delete(portfolios::table.filter(portfolios::id.eq(portfolio_id)))
-        .execute(&mut db_coon)
+        .execute(&mut db_conn)
         .await;
 
-    match portfolio_balance {
-        Ok(_) => match portfolio {
-            Ok(_) => {
-                return Ok(Status::Ok);
-            }
-            Err(_) => {
-                return Err((Status::BadRequest, "Can not remove portfolio"));
-            }
-        },
-        Err(err) => {
-            eprintln!("{:?}", err);
-            return Err((Status::BadRequest, "Can not remove balance"));
+    match portfolio {
+        Ok(_) => {
+            return (Status::Ok, json!({"status":"successful"}));
+        } Err(_) => {
+            return (
+                Status::InternalServerError,
+                json!({"message": "Error deleting portfolio"}),
+            );
         }
-    }
+    }   
 }
