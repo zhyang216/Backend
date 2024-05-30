@@ -54,10 +54,17 @@ pub(crate) async fn signup(
         Ok(_) => {
             return (Status::Ok, json!({"status": "successful"}));
         }
-        Err(_) => {
+        Err(diesel::result::Error::DatabaseError(diesel::result::DatabaseErrorKind::UniqueViolation, _)) => {
             return (
                 Status::BadRequest,
                 json!({"message": "Account already exist."}),
+            );
+        }
+        Err(err) => {
+            println!("{:?}", err);
+            return (
+                Status::BadRequest,
+                json!({"message": "Server Error."}),
             );
         }
     }
