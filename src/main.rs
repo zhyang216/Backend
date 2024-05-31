@@ -15,10 +15,6 @@ use db_lib::{database, RAND};
 mod auth;
 use auth::{forget, login, signup, user_center};
 mod portfolio;
-use portfolio::{
-    change_portfolio::change_portfolio, create_portfolio::add_portfolio,
-    get_portfolio::get_portfolio_names, remove_portfolio::remove_portfolio,
-};
 
 mod order;
 mod risk;
@@ -27,7 +23,7 @@ mod risk;
 fn index() -> RawHtml<&'static str> {
     return RawHtml(include_str!("../static/index.html"));
 }
-#[get("/api/auth/register")]
+#[get("/api/auth/user")]
 async fn signup_page(
     mut db_conn: Connection<database::PgDb>,
     cookies: &CookieJar<'_>,
@@ -70,6 +66,7 @@ async fn forget_page(
     return Ok(RawHtml(include_str!("../static/forget.html")));
 }
 
+/* 
 #[get("/api/portfolio")]
 async fn portfolio_page(
     mut accounts_db_coon: Connection<database::PgDb>,
@@ -80,6 +77,7 @@ async fn portfolio_page(
     }
     return Ok(RawHtml(include_str!("../static/portfolio.html")));
 }
+*/
 
 //TO DO get(reset_page)
 /*
@@ -138,11 +136,10 @@ async fn main() {
                 user_center::logout
             ],
         )
-        .mount("/", routes![forget_page, forget::forget_password])
+        // .mount("/", routes![forget_page, forget::forget_password])
         .mount(
             "/",
             routes![
-                portfolio_page,
                 portfolio::create_portfolio::add_portfolio,
                 portfolio::remove_portfolio::remove_portfolio,
                 portfolio::get_portfolio::get_portfolio_names,

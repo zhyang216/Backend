@@ -1,13 +1,15 @@
 use ::diesel::ExpressionMethods;
 use diesel::query_dsl::methods::{FilterDsl, SelectDsl};
-use pbkdf2::password_hash::{PasswordHash, PasswordHasher};
-use pbkdf2::{password_hash::PasswordVerifier, Pbkdf2};
-use rocket::form::{Form, Strict};
+use pbkdf2::password_hash::PasswordHasher;
 use rocket::http::{CookieJar, Status};
 use rocket::response::Redirect;
 use rocket_db_pools::diesel::prelude::RunQueryDsl;
 use rocket_db_pools::{diesel, Connection};
+use rocket::serde::json::Json;
+use rocket::serde::json::{json, Value};
+use serde::{Deserialize, Serialize};
 
+use crate::auth::validation::UserAuth;
 use crate::db_lib::schema::{accounts, sessions};
 use crate::db_lib::session::SessionToken;
 use crate::db_lib::{database, USER_COOKIE_NAME};
@@ -70,10 +72,10 @@ pub async fn set_new_password(
     }
 }
 
-#[derive(FromForm)]
-pub struct ResetPasswordInfo<'r> {
-    current_password: &'r str,
-    new_password: &'r str,
+
+#[derive(Serialize, Deserialize)]
+pub(crate) struct ResetPasswordInfo<'r> {
+    password: &'r str,
 }
 
 // if signup sucessfully, redirect to login page. (It won't log in automatically)
@@ -82,65 +84,47 @@ pub struct ResetPasswordInfo<'r> {
 pub async fn reset_password(
     reset_password_info: Form<Strict<ResetPasswordInfo<'_>>>,
     mut db_conn: Connection<database::PgDb>,
-    cookies: &CookieJar<'_>,
-) -> Result<Redirect, (Status, &'static str)> {
+    _user_auth: UserAuth,
+) -> (Status, Value) {
     // ensure the user is logged in
-    let user_id = if let Some(user_id) = get_logged_in_user_id(cookies, &mut db_conn).await {
-        user_id
-    } else {
-        return Err((
-            Status::BadRequest,
-            "Cannot fetch user id based on session token cookie or cookie crushed.",
-        ));
-    };
+    let user_id = _user_auth.user_id;
 
-    // fetch the (hashed)user password from the database
-    let fetch_user_password = accounts::table
-        .select(accounts::password)
-        .filter(accounts::id.eq(user_id))
-        .first::<String>(&mut db_conn)
-        .await;
-
-    let current_hashed_password = if let Ok(password) = fetch_user_password {
-        password
-    } else {
-        return Err((Status::BadRequest, "Fail to fetch password from database"));
-    };
-
-    // If (hashed)current_password doesn't match, return badrequest
-    if let Err(_err) = Pbkdf2.verify_password(
-        reset_password_info.current_password.as_bytes(),
-        &PasswordHash::new(&current_hashed_password).unwrap(),
-    ) {
-        return Err((Status::BadRequest, "Current password wrong."));
+    let reset_result = set_new_password(user_id, reset_password_info.password, &mut db_conn).await;
+    match reset_result {
+        Ok(_) => {
+            return (Status::Ok, json!({"status":"successful"}));
+        }
+        Err(_) => {
+            return (
+                Status::ServiceUnavailable,
+                json!({"message": "Fail to reset password."}),
+            );
+        }
     }
-
-    set_new_password(user_id, reset_password_info.new_password, &mut db_conn).await
 }
 
 // remove the session token from both the server(database) and the client(cookie)
 #[get("/logout")]
-pub async fn logout(
     mut db_conn: Connection<database::PgDb>,
     cookies: &CookieJar<'_>,
-) -> Result<Redirect, (Status, &'static str)> {
+    _user_auth: UserAuth,
+) -> (Status, Value) {
     // Ensure the user is logged in
-    let user_id = if let Some(user_id) = get_logged_in_user_id(&cookies, &mut db_conn).await {
-        user_id
-    } else {
-        return Err((Status::BadRequest, "Not logged in."));
-    };
+    let user_id = _user_auth.user_id;
 
     // remove session token from server(database) and client(cookie)
     cookies.remove_private(USER_COOKIE_NAME);
-    return match diesel::delete(sessions::table.filter(sessions::user_id.eq(user_id)))
-        .execute(&mut db_conn)
-        .await
-    {
-        Ok(_) => Ok(Redirect::to(uri!("/login"))),
-        Err(_) => Err((
-            Status::BadRequest,
-            "Fail to remove session token in the database",
-        )),
-    };
+    let logout_result = diesel::delete(sessions::table.filter(sessions::user_id.eq(user_id))).execute(&mut db_conn).await;
+
+    match logout_result {
+        Ok(_) => { 
+            return (Status::Ok, json!({"status":"successful"}));
+        }
+        Err(_) => {
+            return (
+                Status::BadRequest,
+                json!({"message": "Fail to remove session token in the database."}),
+            );
+        }
+    }
 }

@@ -49,42 +49,22 @@ pub async fn signup(
         .execute(&mut db_conn)
         .await;
 
-    // No need to create default portfolio.
-    // match signup_user_id{
-    //     Ok(id) => {
-    //         let i32_id: i32 = id as i32;
-    //         // inser the main portfolio data into the database
-    //         let main_portfolio_id = rocket_db_pools::diesel::insert_into(schema::portfolios::table)
-    //         .values((
-    //             schema::portfolios::name.eq(format!("{} main account", signup_info.user_name)),
-    //             schema::portfolios::trader_account_id.eq(i32_id),
-    //             schema::portfolios::portfolio_type.eq(2),
-    //         ))
-    //         .execute(&mut accounts_db_coon).await;
-
-    //         let main_portfolio_balance = rocket_db_pools::diesel::insert_into(schema::portfolio_balance::table)
-    //         .values((
-    //             schema::portfolio_balance::quantity.eq(0),
-    //         ))
-    //         .execute(&mut accounts_db_coon).await;
-
-    //         return Ok(Status::Ok);
-    //     }
-    //     Err(err) => {
-    //         eprintln!("{:?}", err);
-    //         return Err((Status::BadRequest, "Account already exist."));
-    //     }
-    // }
-
     // if the user data is inserted successfully, redirect to login page
     match signup_user_id {
         Ok(_) => {
             return (Status::Ok, json!({"status": "successful"}));
         }
-        Err(_) => {
+        Err(diesel::result::Error::DatabaseError(diesel::result::DatabaseErrorKind::UniqueViolation, _)) => {
             return (
                 Status::BadRequest,
                 json!({"status":"error", "message": "Account already exist."}),
+            );
+        }
+        Err(err) => {
+            println!("{:?}", err);
+            return (
+                Status::BadRequest,
+                json!({"message": "Server Error."}),
             );
         }
     }

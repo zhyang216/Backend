@@ -13,7 +13,6 @@ use rocket::State;
 use rocket_db_pools::diesel::prelude::RunQueryDsl;
 use rocket_db_pools::Connection;
 use serde::{Deserialize, Serialize};
-
 #[derive(Serialize, Deserialize)]
 pub struct LoginInfo<'r> {
     name: &'r str,
@@ -63,6 +62,17 @@ pub async fn login(
         Ok(token) => {
             let cookie_value = token.into_cookie_value();
             cookies.add_private(Cookie::build((USER_COOKIE_NAME, cookie_value.clone()))); // default expire time: one week from now
+            let fetch_account_type = accounts::table
+            .select(accounts::account_type)
+            .filter(accounts::id.eq(user_id))
+            .first::<Option<i32>>(&mut db_conn)
+            .await
+            .unwrap();
+            if let Some(account_type) = fetch_account_type {
+                cookies.add(Cookie::build(("account_type", account_type.to_string())));
+            } else {
+                cookies.add(Cookie::build(("account_type", 1.to_string())));
+            }
 
             return (Status::Ok, json!({"status":"successful"}));
         }

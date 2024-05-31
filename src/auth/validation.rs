@@ -3,7 +3,7 @@ use diesel::query_dsl::methods::{FilterDsl, SelectDsl};
 use rocket_db_pools::diesel::prelude::RunQueryDsl;
 
 use crate::db_lib::database;
-use crate::db_lib::schema::sessions;
+use crate::db_lib::schema::{sessions, accounts};
 use crate::db_lib::session::SessionToken;
 use crate::db_lib::USER_COOKIE_NAME;
 use rocket::{
@@ -17,6 +17,7 @@ use serde::Deserialize;
 #[derive(Debug, Clone, Deserialize)]
 pub struct UserAuth {
     pub user_id: i32,
+    pub account_type: i32,
 }
 
 #[rocket::async_trait]
@@ -45,7 +46,17 @@ impl<'r> FromRequest<'r> for UserAuth {
             .await;
 
         if let Ok(user_id) = fetch_user_id {
-            return Outcome::Success(UserAuth { user_id: user_id });
+            let fetch_account_type = accounts::table
+            .select(accounts::account_type)
+            .filter(accounts::id.eq(user_id))
+            .first::<Option<i32>>(&mut db_conn)
+            .await
+            .unwrap();
+            if let Some(account_type) = fetch_account_type {
+                return Outcome::Success(UserAuth { user_id: user_id, account_type: account_type});
+            } else {
+                return Outcome::Success(UserAuth { user_id: user_id, account_type: 1});
+            };
         } else {
             return Outcome::Error((Status::Unauthorized, ()));
         };
