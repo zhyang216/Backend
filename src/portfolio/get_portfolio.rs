@@ -15,7 +15,7 @@ use crate::db_lib::schema::{accounts, portfolio_balance, portfolios, sessions};
 use crate::db_lib::{database, USER_COOKIE_NAME};
 
 #[get("/get_portfolio_names")]
-pub(crate) async fn get_portfolio_names(
+pub async fn get_portfolio_names(
     mut db_coon: Connection<database::PgDb>,
     cookies: &CookieJar<'_>,
 ) -> Result<Json<(Vec<(String, i64, i32)>, usize)>, Status> {

@@ -15,12 +15,12 @@ use crate::db_lib::schema::{accounts, portfolio_balance, portfolios, sessions};
 use crate::db_lib::{database, USER_COOKIE_NAME};
 
 #[derive(FromForm)]
-pub(crate) struct RemovePortfolioInfo<'r> {
+pub struct RemovePortfolioInfo<'r> {
     name: &'r str,
 }
 
 #[post("/remove_portfolio", data = "<remove_portfolio_info>")]
-pub(crate) async fn remove_portfolio(
+pub async fn remove_portfolio(
     remove_portfolio_info: Form<Strict<RemovePortfolioInfo<'_>>>,
     mut db_coon: Connection<database::PgDb>,
     cookies: &CookieJar<'_>,

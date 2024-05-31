@@ -4,7 +4,7 @@ import config
 from config import session_requests
 
 data = {
-  "type": "string",
+  "risk_type": "string",
   "on": True,
   "pnl": 0,
   "position": "string",

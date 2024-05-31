@@ -15,14 +15,14 @@ use crate::db_lib::schema::{accounts, portfolio_balance, portfolios, sessions};
 use crate::db_lib::{database, USER_COOKIE_NAME};
 
 #[derive(FromForm)]
-pub(crate) struct AddPortfolioInfo<'r> {
+pub struct AddPortfolioInfo<'r> {
     name: &'r str,
     amount: i32,
     currency_id: i32,
 }
 
 #[post("/add_portfolio", data = "<add_portfolio_info>")]
-pub(crate) async fn add_portfolio(
+pub async fn add_portfolio(
     add_portfolio_info: Form<Strict<AddPortfolioInfo<'_>>>,
     mut db_coon: Connection<database::PgDb>,
     cookies: &CookieJar<'_>,
